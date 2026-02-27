@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Local environment/secrets
+.env
+.env.*
+!.env.example
+fb_monitor/.env
+fb_monitor/.env.*
+!fb_monitor/.env.example
+
+# Local runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+fb_monitor/seen_listings.db
+
+# Tool/runtime caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Project-specific local browser/session data
+fb_monitor/C:\\fb_scraper_chrome/
+fb_monitor/debug_page.html
+
+# Local watch configuration
+fb_monitor/config.json
+!fb_monitor/config.example.json

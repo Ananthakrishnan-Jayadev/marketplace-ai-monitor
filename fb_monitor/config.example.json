@@ -1,0 +1,18 @@
+{
+  "watchlist": [
+    {
+      "product": "Used Car",
+      "query_prompt": "Find cars under 5000, with less than 100k km, and model year 2017 or newer.",
+      "min_price": 500,
+      "max_price": 5000,
+      "radius_km": 50,
+      "ai_max_candidates": 25,
+      "seed_keywords": [
+        "toyota",
+        "honda",
+        "mazda",
+        "hyundai"
+      ]
+    }
+  ]
+}
