@@ -1,11 +1,14 @@
+import logging
 import os
 import random
+import subprocess
 import time
 from urllib.parse import quote
 from playwright.sync_api import sync_playwright, BrowserContext, Page
 
 _playwright = None
 _context: BrowserContext = None
+logger = logging.getLogger("fb_monitor.browser")
 
 
 def random_delay(min_sec: float, max_sec: float) -> None:
@@ -65,14 +68,42 @@ def launch_browser(chrome_user_data_dir: str) -> Page:
     global _playwright, _context
 
     _playwright = sync_playwright().start()
-    _context = _playwright.chromium.launch_persistent_context(
-        user_data_dir=chrome_user_data_dir,
-        channel="chrome",
-        headless=False,
-        args=["--disable-blink-features=AutomationControlled"],
-    )
-    page = _context.new_page()
-    return page
+    try:
+        _context = _playwright.chromium.launch_persistent_context(
+            user_data_dir=chrome_user_data_dir,
+            channel="chrome",
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        return _context.new_page()
+    except Exception as exc:
+        if _is_profile_lock_error(exc):
+            logger.warning("Chrome profile appears locked: %s", exc)
+            if not _is_profile_in_use(chrome_user_data_dir):
+                removed = _remove_stale_singleton_files(chrome_user_data_dir)
+                if removed > 0:
+                    logger.warning(
+                        "Removed %d stale Chrome lock file(s) in '%s'; retrying launch once.",
+                        removed,
+                        chrome_user_data_dir,
+                    )
+                    _context = _playwright.chromium.launch_persistent_context(
+                        user_data_dir=chrome_user_data_dir,
+                        channel="chrome",
+                        headless=False,
+                        args=["--disable-blink-features=AutomationControlled"],
+                    )
+                    return _context.new_page()
+            raise RuntimeError(
+                "Chrome profile is locked. Close all Chrome/Chromium processes using "
+                f"'{chrome_user_data_dir}' and retry."
+            ) from exc
+        raise
+    finally:
+        if _context is None and _playwright is not None:
+            # Avoid leaking a started Playwright instance on launch failure.
+            _playwright.stop()
+            _playwright = None
 
 
 def close_browser() -> None:
@@ -84,3 +115,41 @@ def close_browser() -> None:
     if _playwright:
         _playwright.stop()
         _playwright = None
+
+
+def _is_profile_lock_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "processsingleton" in text or "singletonlock" in text or "profile is already in use" in text
+
+
+def _is_profile_in_use(profile_dir: str) -> bool:
+    """
+    Best-effort check for active Chrome processes using this profile path.
+    If detection fails, return False and rely on launch retry behavior.
+    """
+    try:
+        result = subprocess.run(
+            ["pgrep", "-af", "chrome"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+        )
+        output = result.stdout or ""
+        return profile_dir in output
+    except Exception:
+        return False
+
+
+def _remove_stale_singleton_files(profile_dir: str) -> int:
+    names = ["SingletonLock", "SingletonCookie", "SingletonSocket"]
+    removed = 0
+    for name in names:
+        path = os.path.join(profile_dir, name)
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                removed += 1
+        except OSError:
+            continue
+    return removed

@@ -8,7 +8,7 @@ from typing import Any
 import requests
 
 
-DEFAULT_MODEL = "minimax/m2.5"
+DEFAULT_MODEL = "minimax-m2.5:cloud"
 DEFAULT_TIMEOUT_SEC = 30
 MAX_PROMPT_TEXT_CHARS = 5000
 
@@ -87,7 +87,11 @@ def _call_ollama(user_prompt: str) -> str:
         raise RuntimeError("OLLAMA_API_BASE_URL is required.")
 
     api_key = os.environ.get("OLLAMA_API_KEY", "").strip()
-    model = os.environ.get("OLLAMA_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    model = (
+        os.environ.get("MODEL_NAME", "").strip()
+        or os.environ.get("OLLAMA_MODEL", "").strip()
+        or DEFAULT_MODEL
+    )
 
     timeout_raw = os.environ.get("OLLAMA_TIMEOUT_SEC", str(DEFAULT_TIMEOUT_SEC)).strip()
     try:

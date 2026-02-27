@@ -8,7 +8,7 @@ import requests
 logger = logging.getLogger("fb_monitor.notifier")
 
 
-def send_notification(listing: dict, entry: dict, ai_result: Any | None = None) -> None:
+def send_notification(listing: dict, entry: dict, ai_result: Any | None = None) -> bool:
     """
     Send a Telegram message for a matched listing.
 
@@ -20,7 +20,7 @@ def send_notification(listing: dict, entry: dict, ai_result: Any | None = None) 
 
     if not token or not chat_id:
         logger.warning("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID; skipping notification.")
-        return
+        return False
 
     product_name = str(entry.get("product", "Match"))
     title = str(listing.get("title", "Unknown title"))
@@ -58,16 +58,16 @@ def send_notification(listing: dict, entry: dict, ai_result: Any | None = None) 
         "disable_web_page_preview": False,
     }
 
-    _post_with_retry(url_api, payload, product_name, title)
+    return _post_with_retry(url_api, payload, product_name, title)
 
 
-def _post_with_retry(api_url: str, payload: dict, product_name: str, title: str) -> None:
+def _post_with_retry(api_url: str, payload: dict, product_name: str, title: str) -> bool:
     for attempt in range(1, 3):
         try:
             resp = requests.post(api_url, json=payload, timeout=10)
             if resp.status_code == 200:
                 logger.info("Sent notification for '%s' -- %s", product_name, title[:50])
-                return
+                return True
             logger.warning("Attempt %d: Telegram %s -- %s", attempt, resp.status_code, resp.text[:200])
         except requests.RequestException as exc:
             logger.warning("Attempt %d: Request error -- %s", attempt, exc)
@@ -76,6 +76,7 @@ def _post_with_retry(api_url: str, payload: dict, product_name: str, title: str)
             time.sleep(5)
 
     logger.error("Failed to send notification for '%s' after 2 attempts.", product_name)
+    return False
 
 
 def _format_price(price: object) -> str:

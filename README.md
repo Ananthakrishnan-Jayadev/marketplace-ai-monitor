@@ -23,7 +23,10 @@ fb_monitor/
 ├── ai_filter.py     # Ollama Cloud evaluation
 ├── notifier.py      # Telegram notifications
 ├── db.py            # SQLite deduplication
-├── config.json      # Watchlist configuration
+├── service.py       # FastAPI service + local dashboard API
+├── dashboard/       # React dashboard (single-page UI)
+├── config.json      # Local watchlist configuration (gitignored)
+├── config.example.json # Example watchlist configuration
 ├── .env.example     # Environment template
 ├── .env             # Secrets (never commit this)
 └── requirements.txt # Python dependencies
@@ -100,8 +103,13 @@ CHROME_USER_DATA_DIR=C:\Users\YourName\AppData\Local\Google\Chrome\User Data
 OLLAMA_API_BASE_URL=https://your-ollama-endpoint
 OLLAMA_API_KEY=your_ollama_cloud_api_key
 OLLAMA_MODEL=minimax/m2.5
+# MODEL_NAME also supported as an alias (takes priority if set)
+# MODEL_NAME=minimax/m2.5
 OLLAMA_TIMEOUT_SEC=30
 LOG_LEVEL=INFO
+DASHBOARD_ACCESS_TOKEN=change_me_to_a_long_random_secret
+SERVICE_HOST=127.0.0.1
+SERVICE_PORT=8080
 
 # Optional global location filter (used in search URL)
 LATITUDE=49.2827
@@ -111,12 +119,13 @@ RADIUS_KM=50
 
 `LATITUDE`, `LONGITUDE`, and `RADIUS_KM` are optional. If provided, searches include Marketplace location filtering.
 `LOG_LEVEL` is optional (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
+`DASHBOARD_ACCESS_TOKEN` is required for service/dashboard mode.
 
 ---
 
 ## Configure your watchlist
 
-Edit `fb_monitor/config.json` to add the products you want to track.
+Create `fb_monitor/config.json` from `fb_monitor/config.example.json`, then edit it for your local watchlist.
 
 ```json
 {
@@ -148,7 +157,7 @@ Edit `fb_monitor/config.json` to add the products you want to track.
 
 ---
 
-## Run the monitor
+## Run the monitor (script mode)
 
 ```cmd
 cd fb_monitor
@@ -161,6 +170,26 @@ python main.py
 - Validates `.env` and `config.json` at startup (exits early on invalid config)
 - Pipeline: search by `seed_keywords` -> parse cards -> prefilter -> fetch detail pages -> AI evaluate -> notify pass results
 - New matches trigger a Telegram message; already-seen listings are skipped automatically
+
+## Run the local service + dashboard
+
+```cmd
+cd fb_monitor
+python service.py
+```
+
+- Starts scheduler worker and FastAPI server in one process
+- Dashboard available at `http://127.0.0.1:8080/` (or your configured host/port)
+- All API/dashboard actions require `DASHBOARD_ACCESS_TOKEN`
+- API endpoints:
+  - `GET /api/health`
+  - `GET /api/runs`
+  - `GET /api/errors`
+  - `GET /api/matches`
+  - `GET /api/watchlist`
+  - `POST /api/run/trigger`
+  - `POST /api/watchlist/{watch_id}/pause`
+  - `POST /api/watchlist/{watch_id}/resume`
 
 ### Example Telegram notification
 
@@ -180,8 +209,11 @@ Extracted: Year: 2018 | Mileage: 92000 km
 ## Notes
 
 - **Do not** have Chrome open when running the script — Playwright needs exclusive access to the profile directory.
+- If you see `ProcessSingleton`/`SingletonLock` errors, close all Chrome windows and retry. The app also attempts one stale-lock cleanup retry automatically.
 - The `seen_listings.db` SQLite file is created automatically on first run.
+- SQLite also stores run history, classified errors, match decisions, and watchlist pause/resume state.
 - Deduplication uses Marketplace item ID from URL when available (with URL/title-price fallback), so duplicate cards from the same listing are ignored reliably.
 - If Ollama is unavailable, candidates are skipped for that run and retried in later runs.
 - AI responses are parsed in dual mode: strict JSON first, then text fallback.
+- Secrets are redacted in logs and persisted error messages.
 - This tool is for personal, local use only. Use responsibly and in accordance with Facebook's Terms of Service.

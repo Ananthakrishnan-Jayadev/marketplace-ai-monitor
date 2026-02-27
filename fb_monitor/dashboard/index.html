@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FB Monitor Dashboard</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+      :root {
+        --bg-1: #f2e8db;
+        --bg-2: #f8f4ed;
+        --ink: #1f1e22;
+        --ink-soft: #57515f;
+        --line: #d3c6b7;
+        --card: rgba(255, 255, 255, 0.78);
+        --accent: #007a67;
+        --accent-dark: #005f51;
+        --warn: #d95333;
+        --ok: #2b8f4e;
+        --pill: #ede7dc;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 8% 8%, #f6d9b5 0%, transparent 32%),
+          radial-gradient(circle at 92% 22%, #d2efe9 0%, transparent 36%),
+          linear-gradient(165deg, var(--bg-1), var(--bg-2));
+      }
+
+      .shell {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 24px 14px 40px;
+        animation: fade-in 0.45s ease;
+      }
+
+      .hero {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 20px;
+        padding: 20px;
+        background:
+          linear-gradient(125deg, rgba(255, 255, 255, 0.84), rgba(248, 244, 237, 0.84)),
+          repeating-linear-gradient(
+            -45deg,
+            rgba(120, 89, 37, 0.03),
+            rgba(120, 89, 37, 0.03) 6px,
+            transparent 6px,
+            transparent 12px
+          );
+        box-shadow: 0 12px 25px rgba(44, 31, 5, 0.08);
+      }
+
+      .hero-top {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-size: clamp(1.7rem, 3vw, 2.4rem);
+        letter-spacing: 0.2px;
+      }
+
+      .hero-sub {
+        margin-top: 5px;
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 0.95rem;
+      }
+
+      .hero-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .token-wrap {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      input, button {
+        font: inherit;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      input {
+        background: #fff;
+        color: var(--ink);
+      }
+
+      button {
+        cursor: pointer;
+        transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+      }
+
+      button:active { transform: translateY(1px); }
+
+      .btn-main {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .btn-main:hover { background: var(--accent-dark); }
+
+      .btn-soft {
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .btn-soft:hover { background: #f7f5f1; }
+
+      .btn-warn {
+        background: var(--warn);
+        border-color: var(--warn);
+        color: #fff;
+      }
+
+      .banner {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.75);
+        color: var(--ink-soft);
+      }
+
+      .kpis {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .progress-panel {
+        margin-top: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px 12px;
+      }
+
+      .progress-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .progress-title {
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+      }
+
+      .progress-meta {
+        font-size: 0.82rem;
+        color: var(--ink-soft);
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 12px;
+        border-radius: 999px;
+        background: #e7dfd4;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #27a484, #1d7f69);
+        transition: width 0.35s ease;
+      }
+
+      .kpi {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 12px;
+        padding: 11px;
+      }
+
+      .kpi-label {
+        font-size: 0.73rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+      }
+
+      .kpi-value {
+        margin-top: 4px;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .layout {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        grid-column: span 12;
+        border-radius: 16px;
+        background: var(--card);
+        backdrop-filter: blur(2px);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 20px rgba(20, 13, 4, 0.08);
+        padding: 12px;
+        animation: float-up 0.35s ease;
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .table-wrap {
+        margin-top: 10px;
+        overflow: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+        font-size: 0.86rem;
+      }
+
+      th, td {
+        text-align: left;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+        padding: 8px 6px;
+        vertical-align: top;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        background: #f5f3ee;
+        z-index: 2;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--pill);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        font-size: 0.74rem;
+      }
+
+      .pill.ok { background: #e3f4e8; color: #1b6f39; }
+      .pill.warn { background: #fde9e1; color: #98301b; }
+      .pill.neutral { background: #ece8e0; color: #544e43; }
+
+      .actions-inline {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .span-6 { grid-column: span 12; }
+      .span-12 { grid-column: span 12; }
+
+      @media (min-width: 930px) {
+        .span-6 { grid-column: span 6; }
+      }
+
+      @media (max-width: 780px) {
+        .hero-actions {
+          width: 100%;
+          margin-left: 0;
+        }
+        .token-wrap {
+          grid-template-columns: 1fr;
+        }
+        .kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes float-up {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="text/babel">
+      const { useEffect, useMemo, useState } = React;
+
+      function fmtDate(value) {
+        if (!value) return "-";
+        try {
+          return new Date(value).toLocaleString();
+        } catch {
+          return String(value);
+        }
+      }
+
+      function statusClass(status) {
+        if (!status) return "neutral";
+        const s = String(status).toLowerCase();
+        if (s.includes("completed") || s.includes("success")) return "ok";
+        if (s.includes("failed") || s.includes("error")) return "warn";
+        return "neutral";
+      }
+
+      function Dashboard() {
+        const [token, setToken] = useState(localStorage.getItem("fb_monitor_token") || "");
+        const [status, setStatus] = useState(null);
+        const [runs, setRuns] = useState([]);
+        const [errors, setErrors] = useState([]);
+        const [matches, setMatches] = useState([]);
+        const [watchlist, setWatchlist] = useState([]);
+        const [msg, setMsg] = useState("");
+        const [loading, setLoading] = useState(false);
+
+        const headers = useMemo(
+          () => ({
+            "X-Access-Token": token
+          }),
+          [token]
+        );
+
+        const api = async (path, opts = {}) => {
+          const resp = await fetch(path, {
+            ...opts,
+            headers: {
+              ...(opts.headers || {}),
+              ...headers
+            }
+          });
+          if (!resp.ok) {
+            const text = await resp.text();
+            throw new Error(`${resp.status} ${text}`);
+          }
+          return resp.json();
+        };
+
+        const load = async (quiet = false) => {
+          if (!token) return;
+          if (!quiet) setLoading(true);
+          try {
+            const [health, runData, errData, matchData, watchData] = await Promise.all([
+              api("/api/health"),
+              api("/api/runs?limit=20"),
+              api("/api/errors?limit=30"),
+              api("/api/matches?limit=30"),
+              api("/api/watchlist")
+            ]);
+            setStatus(health);
+            setRuns(runData.items || []);
+            setErrors(errData.items || []);
+            setMatches(matchData.items || []);
+            setWatchlist(watchData.items || []);
+            if (!quiet) setMsg("Dashboard refreshed.");
+          } catch (err) {
+            setMsg(String(err.message || err));
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        useEffect(() => {
+          if (!token) return;
+          load(true);
+          const id = setInterval(() => load(true), 10000);
+          return () => clearInterval(id);
+        }, [token]);
+
+        const saveToken = () => {
+          localStorage.setItem("fb_monitor_token", token);
+          setMsg("Token saved.");
+          load(true);
+        };
+
+        const triggerRun = async () => {
+          try {
+            await api("/api/run/trigger", { method: "POST" });
+            setMsg("Manual run accepted.");
+            load(true);
+          } catch (err) {
+            setMsg(String(err.message || err));
+          }
+        };
+
+        const setPaused = async (watchId, paused) => {
+          try {
+            await api(`/api/watchlist/${watchId}/${paused ? "pause" : "resume"}`, { method: "POST" });
+            setMsg(paused ? `Watch ${watchId} paused.` : `Watch ${watchId} resumed.`);
+            load(true);
+          } catch (err) {
+            setMsg(String(err.message || err));
+          }
+        };
+
+        const runtime = status?.runtime || {};
+        const lastRun = runs[0] || status?.last_run || null;
+        const activeWatches = watchlist.filter((w) => !w.paused).length;
+        const pausedWatches = watchlist.filter((w) => w.paused).length;
+        const aiCurrent = Number(runtime.ai_progress_current ?? 0);
+        const aiTotal = Number(runtime.ai_progress_total ?? 0);
+        const aiPercent = Math.max(
+          0,
+          Math.min(
+            100,
+            Number(
+              runtime.ai_progress_percent ??
+                (aiTotal > 0 ? ((aiCurrent / aiTotal) * 100) : 0)
+            )
+          )
+        );
+        const showAiProgress = Boolean(runtime.is_running && runtime.phase === "evaluating_ai" && aiTotal > 0);
+
+        return (
+          <div className="shell">
+            <section className="hero">
+              <div className="hero-top">
+                <div>
+                  <h1 className="hero-title">FB Monitor Control Room</h1>
+                  <p className="hero-sub">
+                    Track run health, inspect AI decisions, and control watchlist behavior in one place.
+                  </p>
+                </div>
+                <div className="hero-actions">
+                  <button className="btn-soft" onClick={() => load(false)} disabled={loading}>
+                    {loading ? "Refreshing..." : "Refresh"}
+                  </button>
+                  <button className="btn-main" onClick={triggerRun}>Trigger Run</button>
+                </div>
+              </div>
+
+              <div className="token-wrap">
+                <input
+                  type="password"
+                  placeholder="DASHBOARD_ACCESS_TOKEN"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                />
+                <button className="btn-soft" onClick={saveToken}>Save Token</button>
+                <button className="btn-soft" onClick={() => { localStorage.removeItem("fb_monitor_token"); setToken(""); setMsg("Token cleared."); }}>
+                  Clear
+                </button>
+              </div>
+
+              {msg && <div className="banner">{msg}</div>}
+
+              <div className="kpis">
+                <div className="kpi">
+                  <div className="kpi-label">Runtime Status</div>
+                  <div className="kpi-value">{runtime.last_status || "unknown"}</div>
+                </div>
+                <div className="kpi">
+                  <div className="kpi-label">Last Run ID</div>
+                  <div className="kpi-value">{runtime.last_run_id ?? "-"}</div>
+                </div>
+                <div className="kpi">
+                  <div className="kpi-label">Active Watches</div>
+                  <div className="kpi-value">{activeWatches}</div>
+                </div>
+                <div className="kpi">
+                  <div className="kpi-label">Paused Watches</div>
+                  <div className="kpi-value">{pausedWatches}</div>
+                </div>
+              </div>
+
+              <div className="progress-panel">
+                <div className="progress-head">
+                  <div className="progress-title">Model Analysis Progress</div>
+                  <div className={`pill ${runtime.is_running ? "ok" : "neutral"}`}>
+                    {runtime.phase || "idle"}
+                  </div>
+                </div>
+                {showAiProgress ? (
+                  <>
+                    <div className="progress-meta">
+                      {`Watch ${runtime.active_watch_id ?? "-"}: ${runtime.active_product || "N/A"} — ${aiCurrent}/${aiTotal} evaluated`}
+                    </div>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${aiPercent}%` }} />
+                    </div>
+                    <div className="progress-meta">{aiPercent.toFixed(1)}%</div>
+                  </>
+                ) : (
+                  <div className="progress-meta">
+                    No active model evaluation. Last progress: {aiCurrent}/{aiTotal}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="layout">
+              <article className="card span-6">
+                <h3><span className="dot"></span>Service Health</h3>
+                <div className="table-wrap">
+                  <table>
+                    <tbody>
+                      <tr><th>Running</th><td>{String(runtime.is_running ?? false)}</td></tr>
+                      <tr><th>Last Status</th><td><span className={`pill ${statusClass(runtime.last_status)}`}>{runtime.last_status || "-"}</span></td></tr>
+                      <tr><th>Phase</th><td>{runtime.phase || "-"}</td></tr>
+                      <tr><th>Last Run ID</th><td>{runtime.last_run_id ?? "-"}</td></tr>
+                      <tr><th>Started At</th><td>{fmtDate(runtime.started_at)}</td></tr>
+                      <tr><th>Active Watch</th><td>{runtime.active_watch_id ?? "-"}</td></tr>
+                      <tr><th>Active Product</th><td>{runtime.active_product || "-"}</td></tr>
+                      <tr><th>AI Progress</th><td>{aiCurrent}/{aiTotal} ({aiPercent.toFixed(1)}%)</td></tr>
+                      <tr><th>Last Error</th><td>{runtime.last_error || "-"}</td></tr>
+                      <tr><th>Recent Run Status</th><td>{lastRun?.status || "-"}</td></tr>
+                      <tr><th>Recent Duration</th><td>{lastRun?.duration_ms ?? "-"} ms</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article className="card span-6">
+                <h3><span className="dot"></span>Watchlist Controls</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Product</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {watchlist.map((w) => (
+                        <tr key={w.watch_id}>
+                          <td>{w.watch_id}</td>
+                          <td>{w.product}</td>
+                          <td>
+                            <span className={`pill ${w.paused ? "warn" : "ok"}`}>
+                              {w.paused ? "Paused" : "Active"}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="actions-inline">
+                              {w.paused ? (
+                                <button className="btn-soft" onClick={() => setPaused(w.watch_id, false)}>Resume</button>
+                              ) : (
+                                <button className="btn-warn" onClick={() => setPaused(w.watch_id, true)}>Pause</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article className="card span-6">
+                <h3><span className="dot"></span>Recent Runs</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Trigger</th>
+                        <th>Notified</th>
+                        <th>Errors</th>
+                        <th>Duration ms</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {runs.map((r) => (
+                        <tr key={r.id}>
+                          <td>{r.id}</td>
+                          <td><span className={`pill ${statusClass(r.status)}`}>{r.status}</span></td>
+                          <td>{r.trigger}</td>
+                          <td>{r.notified_count}</td>
+                          <td>{r.error_count}</td>
+                          <td>{r.duration_ms}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article className="card span-6">
+                <h3><span className="dot"></span>Recent Errors</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Run</th>
+                        <th>Code</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {errors.map((e) => (
+                        <tr key={e.id}>
+                          <td>{e.id}</td>
+                          <td>{e.run_id}</td>
+                          <td><span className="pill warn">{e.code}</span></td>
+                          <td>{e.message_redacted}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article className="card span-12">
+                <h3><span className="dot"></span>Recent Match Decisions</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Product</th>
+                        <th>Title</th>
+                        <th>Passed</th>
+                        <th>Notified</th>
+                        <th>AI Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matches.map((m) => (
+                        <tr key={m.id}>
+                          <td>{m.id}</td>
+                          <td>{m.product}</td>
+                          <td>{m.title}</td>
+                          <td>
+                            <span className={`pill ${m.ai_passed ? "ok" : "warn"}`}>
+                              {m.ai_passed ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td>{m.notified ? "Yes" : "No"}</td>
+                          <td>{m.ai_reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </section>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("app")).render(<Dashboard />);
+    </script>
+  </body>
+</html>
